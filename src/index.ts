@@ -47,3 +47,7 @@ export type {
   BatchVerificationResult,
 } from "./batch.js";
 export { verifyAttestationBatch } from "./batch.js";
+
+// Revocation
+export type { RevocationRecord, RevocationStore, VerifyAttestationWithRevocationResult } from "./revocation.js";
+export { RevocationRegistry, InMemoryRevocationStore, verifyAttestationWithRevocation } from "./revocation.js";
