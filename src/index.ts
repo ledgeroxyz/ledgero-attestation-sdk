@@ -55,3 +55,7 @@ export { RevocationRegistry, InMemoryRevocationStore, verifyAttestationWithRevoc
 // Supersede/amend chaining
 export type { AttestationChainEntry, AttestationChainResult } from "./chain.js";
 export { buildAmendmentChain, validateAttestationChain } from "./chain.js";
+
+// Runtime payload validation
+export type { ValidateAttestationPayloadResult } from "./validate.js";
+export { attestationPayloadSchema, supportingDataRefSchema, validateAttestationPayload } from "./validate.js";

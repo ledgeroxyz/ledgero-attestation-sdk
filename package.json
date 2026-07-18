@@ -50,7 +50,8 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "viem": "^2.21.55"
+    "viem": "^2.21.55",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
