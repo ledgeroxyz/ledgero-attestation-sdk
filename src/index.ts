@@ -38,3 +38,12 @@ export { verifyAttestation, isExpired } from "./verify.js";
 
 // On-chain-ready encoding
 export { encodeAttestation, decodeAttestation } from "./encode.js";
+
+// Batch verification
+export type {
+  BatchAttestationItem,
+  BatchVerificationItemResult,
+  BatchVerificationStats,
+  BatchVerificationResult,
+} from "./batch.js";
+export { verifyAttestationBatch } from "./batch.js";
