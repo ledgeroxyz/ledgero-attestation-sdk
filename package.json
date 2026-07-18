@@ -1,7 +1,7 @@
 {
   "name": "@ledgeroxyz/attestation-sdk",
-  "version": "0.1.0",
-  "description": "TypeScript SDK for building, hashing, signing, and verifying LEDGERO underwriting attestations (EIP-712 typed data, canonical hashing, on-chain-ready encoding).",
+  "version": "0.2.0",
+  "description": "TypeScript SDK for building, hashing, signing, and verifying LEDGERO underwriting attestations (EIP-712 typed data, canonical hashing, on-chain-ready encoding, batch verification, revocation, amendment chaining, runtime validation).",
   "type": "module",
   "license": "MIT",
   "author": "ledgeroxyz",
@@ -13,7 +13,9 @@
     "underwriting",
     "viem",
     "typed-data",
-    "sdk"
+    "sdk",
+    "zod",
+    "revocation"
   ],
   "homepage": "https://ledgero.xyz",
   "repository": {
