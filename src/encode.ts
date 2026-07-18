@@ -2,6 +2,7 @@ import { decodeAbiParameters, encodeAbiParameters, parseAbiParameters } from "vi
 import type { Hex } from "viem";
 import type { AttestationPayload, EncodedAttestation } from "./types.js";
 import { hashSupportingData } from "./eip712.js";
+import { ZERO_BYTES32 } from "./constants.js";
 
 /**
  * ABI tuple layout for the compact, on-chain-ready form of an attestation.
@@ -10,7 +11,7 @@ import { hashSupportingData } from "./eip712.js";
  * faithful compact serialization of what was actually signed.
  */
 const ENCODED_ATTESTATION_ABI = parseAbiParameters(
-  "(uint16 schemaVersion, string assetClass, bytes32 assetId, address underwriter, address subject, uint16 riskScore, string riskTier, uint64 issuedAt, uint64 expiresAt, uint256 nonce, bytes32 supportingDataHash) att",
+  "(uint16 schemaVersion, string assetClass, bytes32 assetId, address underwriter, address subject, uint16 riskScore, string riskTier, uint64 issuedAt, uint64 expiresAt, uint256 nonce, bytes32 supportingDataHash, bytes32 supersedes) att",
 );
 
 /**
@@ -34,6 +35,7 @@ export function encodeAttestation(payload: AttestationPayload): Hex {
       expiresAt: BigInt(payload.expiresAt),
       nonce: payload.nonce,
       supportingDataHash,
+      supersedes: payload.supersedes ?? ZERO_BYTES32,
     },
   ]);
 }
@@ -59,5 +61,6 @@ export function decodeAttestation(encoded: Hex): EncodedAttestation {
     expiresAt: Number(tuple.expiresAt),
     nonce: BigInt(tuple.nonce),
     supportingDataHash: tuple.supportingDataHash,
+    supersedes: tuple.supersedes,
   };
 }

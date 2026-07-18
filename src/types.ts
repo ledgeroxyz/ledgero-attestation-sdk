@@ -8,8 +8,19 @@ import type { Address, Hex } from "viem";
  * Consumers should always check `payload.schemaVersion` before trusting the
  * shape of a decoded/received attestation — this library does not silently
  * migrate old versions.
+ *
+ * `2` (current): adds the optional `supersedes` field (see
+ * `AttestationPayload.supersedes`) to the EIP-712 struct and the
+ * ABI-encoded/hashed form. The `supersedes` field on the TypeScript type is
+ * optional and defaults to the zero hash when absent, so source using this
+ * SDK does not need to change — but because it's part of the signed/hashed
+ * struct, the actual bytes produced by `encodeAttestation`/`hashAttestation`
+ * for schema-1-shaped payloads differ from what schema 1 of this SDK would
+ * have produced. That's the point of the version bump: verifiers should
+ * branch on `schemaVersion` if they need byte-for-byte compatibility with a
+ * specific prior release.
  */
-export const ATTESTATION_SCHEMA_VERSION = 1;
+export const ATTESTATION_SCHEMA_VERSION = 2;
 
 /**
  * Broad asset classes LEDGERO underwrites. `"other"` is an intentional
@@ -78,6 +89,14 @@ export interface AttestationPayload {
   nonce: bigint;
   /** Off-chain source documents this attestation is based on. */
   supportingData: SupportingDataRef[];
+  /**
+   * Optional content hash (see `hashAttestation`) of a prior attestation
+   * this one supersedes/amends — e.g. a corrected risk score, an updated
+   * expiry, or a re-underwrite after new documents came in. Omit (or leave
+   * `undefined`) for a standalone attestation that doesn't amend anything.
+   * See `chain.ts` for building/validating a chain of amendments.
+   */
+  supersedes?: Hex;
 }
 
 /** Convenience constructor input: `schemaVersion` defaults to the current schema version if omitted. */
@@ -104,6 +123,7 @@ export function createAttestation(input: NewAttestationInput): AttestationPayloa
     expiresAt: input.expiresAt,
     nonce: input.nonce,
     supportingData: input.supportingData,
+    supersedes: input.supersedes,
   };
 }
 
@@ -133,4 +153,6 @@ export interface EncodedAttestation {
   nonce: bigint;
   /** keccak256 commitment to the full `supportingData` array — see `hashSupportingData`. */
   supportingDataHash: Hex;
+  /** Content hash of the attestation this one supersedes, or the zero hash if none. See `AttestationPayload.supersedes`. */
+  supersedes: Hex;
 }

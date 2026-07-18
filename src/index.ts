@@ -51,3 +51,7 @@ export { verifyAttestationBatch } from "./batch.js";
 // Revocation
 export type { RevocationRecord, RevocationStore, VerifyAttestationWithRevocationResult } from "./revocation.js";
 export { RevocationRegistry, InMemoryRevocationStore, verifyAttestationWithRevocation } from "./revocation.js";
+
+// Supersede/amend chaining
+export type { AttestationChainEntry, AttestationChainResult } from "./chain.js";
+export { buildAmendmentChain, validateAttestationChain } from "./chain.js";

@@ -28,6 +28,7 @@ export const ATTESTATION_EIP712_TYPES = {
     { name: "expiresAt", type: "uint64" },
     { name: "nonce", type: "uint256" },
     { name: "supportingDataHash", type: "bytes32" },
+    { name: "supersedes", type: "bytes32" },
   ],
 } as const;
 
@@ -61,6 +62,7 @@ export interface AttestationTypedMessage {
   expiresAt: bigint;
   nonce: bigint;
   supportingDataHash: Hex;
+  supersedes: Hex;
 }
 
 /** Project an `AttestationPayload` down to the EIP-712 `message` shape (collapsing `supportingData` into its hash). */
@@ -77,5 +79,6 @@ export function toAttestationMessage(payload: AttestationPayload): AttestationTy
     expiresAt: BigInt(payload.expiresAt),
     nonce: payload.nonce,
     supportingDataHash: hashSupportingData(payload.supportingData),
+    supersedes: payload.supersedes ?? ZERO_BYTES32,
   };
 }
