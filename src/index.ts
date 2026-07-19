@@ -59,3 +59,13 @@ export { buildAmendmentChain, validateAttestationChain } from "./chain.js";
 // Runtime payload validation
 export type { ValidateAttestationPayloadResult } from "./validate.js";
 export { attestationPayloadSchema, supportingDataRefSchema, validateAttestationPayload } from "./validate.js";
+
+// Off-chain content-hash attestations (dapp-aligned, signer-free)
+export type { AttestationContent, OffchainAttestation } from "./offchain.js";
+export {
+  canonicalAttestationContent,
+  hashAttestationContent,
+  verifyContentHash,
+  newAttestationId,
+  createOffchainAttestation,
+} from "./offchain.js";
