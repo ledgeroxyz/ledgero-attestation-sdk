@@ -69,3 +69,7 @@ export {
   newAttestationId,
   createOffchainAttestation,
 } from "./offchain.js";
+
+// Upgrade adapter: off-chain attestation -> signable on-chain payload
+export type { UpgradeToSignedOptions } from "./upgrade.js";
+export { toSignedAttestationPayload } from "./upgrade.js";
