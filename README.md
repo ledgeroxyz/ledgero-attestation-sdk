@@ -12,7 +12,7 @@ It's designed to be a small, dependable building block that anyone — LEDGERO's
 
 ## Why this exists
 
-LEDGERO ($LDGR) is an AI underwriting agent for RWA tokenization. Given source documents for a candidate asset (an invoice, a receivable, a property, inventory), it:
+LEDGERO ($LEDGER) is an AI underwriting agent for RWA tokenization. Given source documents for a candidate asset (an invoice, a receivable, a property, inventory), it:
 
 1. Ingests and OCRs/extracts structured fields from those documents.
 2. Runs a structured risk assessment (see the companion `risk-sdk` for scoring).
