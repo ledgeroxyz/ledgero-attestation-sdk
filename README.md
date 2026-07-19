@@ -210,6 +210,87 @@ if (!valid) {
 
 `validateAttestationPayload` checks an `unknown` value against a [zod](https://zod.dev) schema (`attestationPayloadSchema`, also exported directly if you want to compose it into a larger schema) mirroring `AttestationPayload` field-for-field — field types, hex/address formats, enum vocabularies, and numeric ranges. This is a **shape** check, not a cryptographic one: pair it with `verifyAttestation`/`verifyAttestationWithRevocation` once you know a payload is well-formed enough to be worth checking a signature against.
 
+## Off-chain attestations & dapp alignment
+
+Everything above describes a **fully signed, EIP-712 on-chain-ready** attestation — it needs an underwriter key (or `LocalAccount`) to sign. But an issuer often has an earlier, **pre-on-chain** stage: the assessment has run and produced a verifiable record, but there's no signing key or chain anchor yet. This is exactly where the [LEDGERO dapp](https://ledgero.xyz) sits today — it issues an attestation by computing a **SHA-256 content hash** over the assessed fields (no EIP-712, no private key) and storing that hash as a tamper-evident "faithful stand-in for a signed, verifiable record."
+
+This SDK models that stage directly, so the dapp (and anyone else) can adopt the SDK without first standing up a signer — and later **promote** the same record to a full signed attestation without re-deriving anything.
+
+### Issue an off-chain (content-hash) attestation
+
+```ts
+import { createOffchainAttestation, hashAttestationContent, verifyContentHash } from "@ledgeroxyz/attestation-sdk";
+
+const content = {
+  assetId: "asset_9f2c1a7b4e6d4c3f",
+  name: "Series A Invoice — Acme Corp",
+  assetClass: "invoice",
+  claimedValue: 250_000,
+  score: 72,          // 0-100 scale
+  rating: "B",        // A | B | C | D
+  issuedAt: new Date().toISOString(),
+};
+
+const attestation = createOffchainAttestation(content);
+// -> { ...content, attestationId: "att_<uuid>", contentHash: "<64-char sha256 hex>" }
+
+// Or just the hash:
+const hash = hashAttestationContent(content);
+verifyContentHash(content, hash); // true
+```
+
+**The hashed field set and order are load-bearing.** `hashAttestationContent` computes SHA-256 over `JSON.stringify` of exactly these fields, in exactly this order:
+
+```
+assetId, name, assetClass, claimedValue, score, rating, issuedAt
+```
+
+This matches the LEDGERO dapp's `runAssessment` **byte-for-byte** — the returned hash is **un-prefixed, lowercase hex** (64 chars), the same format the dapp stores as `attestationHash`. (viem's `sha256` returns `0x`-prefixed hex; the prefix is stripped so the two agree exactly. There's a test asserting equivalence against the dapp's SHA-256-over-canonical-JSON algorithm.) `attestationId` is deliberately **not** part of the hashed content — it identifies the record, it isn't assessed data. `canonicalAttestationContent` emits the fields in the fixed order regardless of your input object's key order, so callers can't accidentally produce a different hash by ordering keys differently.
+
+If you need a `bytes32` for on-chain use, prepend `0x` — SHA-256 is 32 bytes, so `0x<contentHash>` is a valid `bytes32`.
+
+### Promote an off-chain attestation to a signed on-chain one
+
+When the issuer is ready to sign and anchor on-chain, `toSignedAttestationPayload` maps a dapp-style off-chain attestation into a full `AttestationPayload`, which you then sign with the existing `signAttestation`:
+
+```ts
+import {
+  createOffchainAttestation,
+  toSignedAttestationPayload,
+  createAttestationDomain,
+  signAttestation,
+  verifyAttestation,
+  ZERO_ADDRESS,
+} from "@ledgeroxyz/attestation-sdk";
+
+const offchain = createOffchainAttestation(content);
+
+// Supply the on-chain-only fields; everything else is derived from `offchain`.
+const payload = toSignedAttestationPayload(offchain, {
+  underwriter: "0xUnderwriterAgentAddress...", // required
+  subject: ZERO_ADDRESS,                        // optional (default: zero address)
+  nonce: 1n,                                     // optional (default: 0n)
+  expiresAt: 0,                                  // optional (default: 0 = never)
+});
+
+const domain = createAttestationDomain({ chainId: 8453, verifyingContract: "0xRegistry..." });
+const signature = await signAttestation(payload, domain, "0x...privateKey");
+const result = await verifyAttestation(payload, domain, signature); // { valid: true, ... }
+```
+
+How each on-chain field is derived from the off-chain content (all overridable via the second argument):
+
+| On-chain field | Derived from | Rule |
+|---|---|---|
+| `assetId` (`bytes32`) | off-chain `assetId` string | `keccak256(stringToHex(assetId))` |
+| `assetClass` | off-chain `assetClass` | passed through if a recognized `AssetClass`, else `"other"` |
+| `riskScore` (0-1000) | off-chain `score` (0-100) | `score * 10` |
+| `riskTier` | off-chain `rating` | passed through if a valid `RiskTier` (the dapp's A/B/C/D all are); throws if unmappable and no `riskTier` override |
+| `issuedAt` (unix s) | off-chain `issuedAt` (ISO) | `Date.parse(...) / 1000`; throws if unparseable and no `issuedAt` override |
+| `supportingData` | off-chain `contentHash` | one ref committing to the off-chain SHA-256 content hash, tying the signed record to the exact off-chain record it was promoted from |
+
+The default `supportingData` ref means a verifier of the **signed** attestation can re-derive the original off-chain `contentHash` (via `hashAttestationContent`) and confirm it matches the committed `bytes32` — the off-chain and on-chain records are provably the same underwriting. Only `underwriter` is required; anything the derivation gets wrong for your use case can be overridden explicitly.
+
 ## API overview
 
 | Export | Purpose |
@@ -227,6 +308,10 @@ if (!valid) {
 | `RevocationRegistry`, `InMemoryRevocationStore`, `RevocationStore`, `verifyAttestationWithRevocation` | Track and check revoked attestations by content hash |
 | `buildAmendmentChain`, `validateAttestationChain`, `AttestationChainEntry`, `AttestationChainResult` | Resolve a `supersedes`-linked set of attestations into an ordered amendment chain |
 | `validateAttestationPayload`, `attestationPayloadSchema`, `supportingDataRefSchema` | Runtime (zod) shape validation for an untrusted/deserialized `AttestationPayload` |
+| `AttestationContent`, `OffchainAttestation` | Types for signer-free, content-hash (dapp-aligned) attestations |
+| `hashAttestationContent`, `canonicalAttestationContent`, `verifyContentHash` | Dapp-equivalent SHA-256 content hash over the canonical field order |
+| `createOffchainAttestation`, `newAttestationId` | Build an off-chain attestation record / generate an `att_<uuid>` id |
+| `toSignedAttestationPayload`, `UpgradeToSignedOptions` | Promote an off-chain attestation to a full EIP-712-signable `AttestationPayload` |
 | `ZERO_ADDRESS`, `ZERO_BYTES32` | Convenience constants |
 
 Everything is exported from the package root:
